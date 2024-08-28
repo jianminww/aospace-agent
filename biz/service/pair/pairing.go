@@ -25,6 +25,8 @@ package pair
 import (
 	"fmt"
 	"time"
+	"os"
+	"os/exec"
 
 	"agent/biz/docker"
 	"agent/biz/model/clientinfo"
@@ -85,7 +87,19 @@ func doPairing(clientUuid, clientPhoneModel string) (dto.BaseRspStr, error) {
 	clientinfo.SaveClientExchangeKey() // https://pm.eulix.xyz/bug-view-645.html
 
 	// 盒子注册成功了. 开始启动容器. 后面将调用容器的注册管理员接口.
-	go docker.PostEvent(docker.EventPairing)
+	single_or_all := os.Getenv("SINGLE_DOCKER")
+	if single_or_all == "yes" {
+		cmd := exec.Command("/usr/local/bin/start.sh")
+		output, err := cmd.Output()
+    	if err != nil {
+        	fmt.Println("Error:", err)
+        	return
+    	}
+		fmt.Println(string(output))
+	} else {
+		go docker.PostEvent(docker.EventPairing)
+	}
+
 
 	type CreateStruct struct {
 		BoxUUID    string `json:"boxUUID,omitempty"`
