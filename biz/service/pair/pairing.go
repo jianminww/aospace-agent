@@ -93,7 +93,6 @@ func doPairing(clientUuid, clientPhoneModel string) (dto.BaseRspStr, error) {
 		output, err := cmd.Output()
     	if err != nil {
         	fmt.Println("Error:", err)
-        	return
     	}
 		fmt.Println(string(output))
 	} else {
