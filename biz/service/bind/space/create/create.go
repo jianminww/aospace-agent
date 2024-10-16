@@ -32,6 +32,8 @@ import (
 	"agent/utils/retry"
 	"encoding/base64"
 	"fmt"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -58,7 +60,7 @@ func (svc *SpaceCreateService) Process() dto.BaseRspStr {
 	rsp := &create.CreateRsp{}
 
 	req := svc.Req.(*create.CreateReq)
-	// logger.AppLogger().Debugf("SpaceCreateService Process, req:%+v", req)
+	logger.AppLogger().Debugf("SpaceCreateService Process, req:%+v", req)
 	logger.AppLogger().Debugf("SpaceCreateService Process, pairedInfo:%+v", svc.PairedInfo)
 	logger.AppLogger().Debugf("SpaceCreateService, rebind:%+v", svc.PairedInfo.Rebind())
 
@@ -125,10 +127,13 @@ func (svc *SpaceCreateService) Process() dto.BaseRspStr {
 	logger.AppLogger().Debugf("callGateway, microServerRsp:%v", microServerRsp)
 
 	// TODO: update did doc history
-	// ...
-	// 启动/停止转发服务
-	svc.startOrStopContainers()
-	logger.AppLogger().Debugf("startOrStopContainers")
+
+	singleDockerModeEnv := os.Getenv(config.Config.Box.RunInDocker.AoSpaceSingleDockerModeEnv)
+	if !strings.EqualFold(singleDockerModeEnv, "true") {
+		// 启动/停止转发服务
+		svc.startOrStopContainers()
+		logger.AppLogger().Debugf("startOrStopContainers")
+	}
 
 	svc.Rsp = rsp
 
@@ -163,7 +168,7 @@ func (svc *SpaceCreateService) registerDevice(req *create.CreateReq) (*dto.BaseR
 }
 
 func (svc *SpaceCreateService) callGateway(req *create.CreateReq) (call.MicroServerRsp, error) {
-	// logger.AppLogger().Debugf("callGateway, req:%+v ", req)
+	logger.AppLogger().Debugf("callGateway, req:%+v ", req)
 
 	var microServerRsp call.MicroServerRsp
 
