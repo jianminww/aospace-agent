@@ -45,7 +45,7 @@ func CallServiceByPost(url string, headers map[string]string, req, rsp interface
 	}
 	httpReq, httpRsp, body, err1 := utilshttp.PostJsonWithHeaders(url, req, headers, rsp)
 	if err1 != nil {
-		// logger.AppLogger().Warnf("Failed CallServiceByPost, err:%v, @@httpReq:%+v, @@httpRsp:%+v, @@body:%v", err1, httpReq, httpRsp, string(body))
+		logger.AppLogger().Warnf("Failed CallServiceByPost, err:%v, @@httpReq:%+v, @@httpRsp:%+v, @@body:%v", err1, httpReq, httpRsp, string(body))
 		return err1
 	}
 	// logger.AppLogger().Debugf("CallServiceByPost, req:%+v", req)

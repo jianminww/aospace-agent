@@ -18,37 +18,19 @@ WORKDIR /work/
 
 COPY . .
 
-RUN apt update && apt install npm nodejs zip -y
-RUN cd web/boxdocker && npm install && npm run build && mv dist boxdocker && \
-        zip -r static_html.zip boxdocker && mv static_html.zip ../../res && cd ../../
 RUN go env -w GO111MODULE=on && make -f Makefile
 
-FROM debian:12
+FROM space-single:local
 
-ENV LANG C.UTF-8
-ENV TZ=Asia/Shanghai \
-    DEBIAN_FRONTEND=noninteractive
-
-RUN set -eux; \
-	apt-get update; \
-	apt-get install -y --no-install-recommends \
-		ca-certificates \
-		netbase \
-		tzdata \
-        supervisor \
-		iputils-ping \
-		docker-compose \
-		curl \
-		cron \
-    ; \
-	apt remove docker.io -y ; \
-	rm -rf /var/lib/apt/lists/*
-
+# space-agent
 COPY --from=builder /work/build/aospace /usr/local/bin/aospace
-COPY --from=builder /work/supervisord.conf /etc/supervisor/supervisord.conf
 
-EXPOSE 5678
+RUN apt-get update \
+    && apt-get install -y jq yq
+
+EXPOSE 80 443 5432 6379 3001 2001 8080 5678 5680
 
 HEALTHCHECK --interval=60s --timeout=15s CMD curl -XGET http://localhost:5678/agent/status
 
-CMD ["/usr/bin/supervisord","-n", "-c", "/etc/supervisor/supervisord.conf"]
+# 使用启动脚本作为入口点
+ENTRYPOINT ["/usr/local/bin/prestart.sh"]

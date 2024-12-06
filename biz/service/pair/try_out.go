@@ -22,14 +22,8 @@ import (
 	"agent/biz/model/dto/pair/tryout"
 	"agent/config"
 	"fmt"
-	"net/http"
-	"time"
 
 	"agent/utils/logger"
-
-	utilshttp "agent/utils/network/http"
-
-	"github.com/dungeonsnd/gocom/encrypt/random"
 )
 
 func ServiceTryout(req *tryout.TryoutCodeReq) (dto.BaseRspStr, error) {
@@ -88,69 +82,9 @@ func presetBoxInfo(req *tryout.TryoutCodeReq) (dto.BaseRspStr, error) {
 	url := device.GetApiBaseUrl() + config.Config.Platform.PresetBoxInfo.Path
 	logger.AppLogger().Debugf("presetBoxInfo, url:%+v, parms:%+v", url, parms)
 
-	var headers = map[string]string{"Request-Id": random.GenUUID()}
-	var rsp platformRspStruct
+	//TODO: Use pubkey as SN Number
+	device.UpdateSnNumber(parms.BoxInfo.BoxUUID)
+	device.UpdateApplyEmail(req.Email)
+	return dto.BaseRspStr{Code: dto.AgentCodeOkStr, Message: "OK", Results: nil}, nil
 
-	tryTotal := 6
-	// var httpReq *http.Request
-	var httpRsp *http.Response
-	var body []byte
-	var err1 error
-	for i := 0; i < tryTotal; i++ {
-		_, httpRsp, body, err1 = utilshttp.PostJsonWithHeaders(url, parms, headers, &rsp)
-		if err1 != nil {
-			// logger.AppLogger().Warnf("Failed PostJson, err:%v, @@httpReq:%+v, @@httpRsp:%+v, @@body:%v", err1, httpReq, httpRsp, string(body))
-			if i == tryTotal-1 {
-				return dto.BaseRspStr{Code: dto.AgentCodeServerErrorStr, Message: err1.Error(), Results: nil}, err1
-			}
-			time.Sleep(time.Second * 2)
-			continue
-		} else {
-			break
-		}
-	}
-
-	logger.AppLogger().Infof("presetBoxInfo, rsp:%+v", rsp)
-	logger.AppLogger().Infof("presetBoxInfo, httpRsp:%+v", httpRsp)
-	logger.AppLogger().Infof("presetBoxInfo, body:%v", string(body))
-
-	if httpRsp.StatusCode == http.StatusOK {
-		if rsp.State == 1 {
-			err1 := fmt.Errorf("httpRsp.StatusCode: %+v, rsp.State: %+v", httpRsp.StatusCode, rsp.State)
-			rsp := dto.BaseRspStr{Code: dto.AgentCodeTryOutCodeDisabled, Message: err1.Error(), Results: nil}
-			return rsp, nil
-		} else if rsp.State == 2 {
-			err1 := fmt.Errorf("httpRsp.StatusCode: %+v, rsp.State: %+v", httpRsp.StatusCode, rsp.State)
-			rsp := dto.BaseRspStr{Code: dto.AgentCodeTryOutCodeExpired, Message: err1.Error(), Results: nil}
-			return rsp, nil
-		}
-
-		err := device.UpdateSnNumber(rsp.BoxInfo.SnNumber)
-		if err != nil {
-			err1 := fmt.Errorf("failed UpdateSnNumber: %+v", err)
-			rsp := dto.BaseRspStr{Code: dto.AgentCodeTryOutCodeExpired, Message: err1.Error(), Results: nil}
-			return rsp, nil
-		}
-
-		device.UpdateApplyEmail(req.Email)
-
-		rsp := dto.BaseRspStr{Code: dto.AgentCodeOkStr, Message: "OK", Results: nil}
-		return rsp, nil
-
-	} else if httpRsp.StatusCode == http.StatusBadRequest {
-		c := dto.AgentCodeBadReqStr
-		if rsp.Code == "PSP-2047" {
-			c = dto.AgentCodeTryOutCodeError
-		} else if rsp.Code == "PSP-2052" {
-			c = dto.AgentCodeTryOutCodeHasUsed
-		}
-		err1 := fmt.Errorf("httpRsp.StatusCode: %+v, rsp.Code: %+v, rsp.Message: %+v", httpRsp.StatusCode, rsp.Code, rsp.Message)
-		rsp := dto.BaseRspStr{Code: c, Message: err1.Error(), Results: nil}
-		return rsp, err1
-
-	} else {
-		err1 := fmt.Errorf("httpRsp.StatusCode: %+v, rsp.Code: %+v, rsp.Message: %+v", httpRsp.StatusCode, rsp.Code, rsp.Message)
-		rsp := dto.BaseRspStr{Code: dto.AgentCodeServerErrorStr, Message: err1.Error(), Results: nil}
-		return rsp, err1
-	}
 }
